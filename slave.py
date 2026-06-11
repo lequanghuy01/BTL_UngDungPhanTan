@@ -42,7 +42,7 @@ def main():
                 break
         
         # Giả lập độ trễ tính toán để dễ quan sát (1 giây)
-        time.sleep(1)
+        time.sleep(3)
         
         # Báo cáo với RabbitMQ là "Tôi đã làm xong gói này, hãy xóa nó khỏi hàng đợi"
         ch.basic_ack(delivery_tag=method.delivery_tag)
