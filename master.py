@@ -1,27 +1,36 @@
 import pika
 import json
+import os
 
-# Mã băm SHA-256 của chữ "phenikaa2024" (Đây là mục tiêu chúng ta cần giải mã)
+# Mã băm SHA-256 của chữ "phenikaa2024"
 TARGET_HASH = "4b8408a2fc212df83ce212cbbeab62a9d80362f6b86ce0dccafb8bda5a782a20"
 
 def main():
-    # 1. Kết nối tới RabbitMQ Server
+    # 1. Kết nối tới RabbitMQ
     connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
     channel = connection.channel()
 
-    # 2. Khai báo 2 hàng đợi (Queue): 1 để giao việc, 1 để nhận kết quả
     channel.queue_declare(queue='task_queue', durable=True)
     channel.queue_declare(queue='result_queue')
 
-    # 3. Tạo một từ điển giả lập (Trong thực tế bạn sẽ đọc từ file txt hàng triệu dòng)
-    dictionary = ["123456", "password", "admin", "phenikaa2023", "phenikaa2024", "qwerty", "iloveyou", "root"]
-    
-    # Chia nhỏ từ điển thành các gói (Ví dụ mỗi gói 2 từ để test, thực tế là 10.000 từ/gói)
-    CHUNK_SIZE = 2
+    # 2. ĐỌC TỪ FILE TXT THAY VÌ MẢNG CỐ ĐỊNH
+    file_path = 'passwords.txt'
+    if not os.path.exists(file_path):
+        print(f"[!] Lỗi: Không tìm thấy file {file_path}. Hãy tạo file này nhé!")
+        return
+
+    # Mở file và đọc tất cả các dòng, loại bỏ khoảng trắng/xuống dòng
+    with open(file_path, 'r', encoding='utf-8') as f:
+        dictionary = [line.strip() for line in f.readlines() if line.strip()]
+
+    print(f"[*] MASTER: Đã tải thành công {len(dictionary)} mật khẩu từ thư viện.")
+
+    # 3. Chia nhỏ khối lượng công việc (Mỗi gói 500 từ)
+    CHUNK_SIZE = 500
     chunks = [dictionary[i:i + CHUNK_SIZE] for i in range(0, len(dictionary), CHUNK_SIZE)]
 
-    # 4. Phân phối việc lên RabbitMQ
-    print("[*] MASTER: Đang chia nhỏ và gửi công việc lên hàng đợi...")
+    print(f"[*] MASTER: Đang chia thành {len(chunks)} gói công việc và ném lên RabbitMQ...")
+    
     for chunk in chunks:
         task = {
             'target_hash': TARGET_HASH,
@@ -32,20 +41,19 @@ def main():
             routing_key='task_queue',
             body=json.dumps(task),
             properties=pika.BasicProperties(
-                delivery_mode=2,  # Đảm bảo message không bị mất nếu RabbitMQ sập
+                delivery_mode=2, # Chống mất dữ liệu
             ))
-    print(f"[*] MASTER: Đã gửi {len(chunks)} gói công việc cho các Slaves.")
+    print(f"[*] MASTER: Đã giao việc xong!")
 
-    # 5. Hàm xử lý khi nhận được tin vui từ Slave
+    # 4. Lắng nghe tin vui từ Slave
     def on_result(ch, method, properties, body):
         result = json.loads(body)
-        print(f"\n[!!!] MASTER NHẬN KẾT QUẢ: Mật khẩu là '{result['password']}' được tìm thấy bởi {result['found_by']}")
-        print("[*] MASTER: Ra lệnh dừng hệ thống (Tắt lắng nghe).")
-        channel.stop_consuming() # Ngừng chờ đợi vì đã tìm ra pass
+        print(f"\n[!!!] MASTER NHẬN KẾT QUẢ: Mật khẩu là '{result['password']}' được tìm ra bởi {result['found_by']}")
+        print("[*] MASTER: Nhiệm vụ hoàn thành, ra lệnh dừng toàn bộ hệ thống!")
+        channel.stop_consuming()
 
-    # 6. Lắng nghe kết quả trả về
     channel.basic_consume(queue='result_queue', on_message_callback=on_result, auto_ack=True)
-    print("\n[*] MASTER: Đang chờ các Slaves báo cáo kết quả. Nhấn CTRL+C để thoát.")
+    print("\n[*] MASTER: Đang chờ các Slaves dò tìm... Nhấn CTRL+C để thoát.")
     channel.start_consuming()
 
 if __name__ == '__main__':
