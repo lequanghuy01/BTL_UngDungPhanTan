@@ -41,8 +41,8 @@ def main():
                 found = True
                 break
         
-        # Giả lập độ trễ tính toán để dễ quan sát (1 giây)
-        time.sleep(0.5)
+        # Giả lập độ trễ tính toán để dễ quan sát (0.5 giây)
+        time.sleep(0.35)
         
         # Báo cáo với RabbitMQ là "Tôi đã làm xong gói này, hãy xóa nó khỏi hàng đợi"
         ch.basic_ack(delivery_tag=method.delivery_tag)
