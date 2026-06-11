@@ -26,7 +26,7 @@ def main():
     print(f"[*] MASTER: Đã tải thành công {len(dictionary)} mật khẩu từ thư viện.")
 
     # 3. Chia nhỏ khối lượng công việc (Mỗi gói 500 từ)
-    CHUNK_SIZE = 500
+    CHUNK_SIZE = 10
     chunks = [dictionary[i:i + CHUNK_SIZE] for i in range(0, len(dictionary), CHUNK_SIZE)]
 
     print(f"[*] MASTER: Đang chia thành {len(chunks)} gói công việc và ném lên RabbitMQ...")
