@@ -3,7 +3,7 @@ import json
 import os
 
 # Mã băm SHA-256 của chữ "phenikaa2024"
-TARGET_HASH = "4b8408a2fc212df83ce212cbbeab62a9d80362f6b86ce0dccafb8bda5a782a20"
+TARGET_HASH = "3ae84091bc9012f4040b22ffb1632573797eb8e28bce094d5a12d2e8c2b1b8c7"
 
 def main():
     # 1. Kết nối tới RabbitMQ
